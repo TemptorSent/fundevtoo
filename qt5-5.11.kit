@@ -1,0 +1,27 @@
+#GITCOMMIT=master
+
+# Eclasses
+eclass/qt5*
+
+# Ebuilds not following release (may be common with other branches)
+dev-qt/qtchooser/qtchooser-0_p20170803.ebuild
+qtlockedfile/qtlockedfile-2.4.1_p20171024.ebuild
+qtlockedfile/files/qtlockedfile.prf
+qtsingleapplication/qtsingleapplication-2.6.1_p20171024.ebuild
+qtsingleapplication/files/qtsingleapplication-2.6.1_p20171024*.patch
+
+# Ebuild on (or nearest) branch, but not exact release triple
+dev-qt/qtwebkit/*-5.9.1*
+dev-qt/qtwebkit/files/qtwebkit-5.4.2-system-leveldb.patch
+dev-qt/qtwebkit/files/qtwebkit-5.8.0-disable-gstreamer.patch
+dev-qt/qtwebkit/files/qtwebkit-5.5.1-disable-jit.patch
+dev-qt/qtwebkit/*-5.212*
+dev-qt/qtwebkit/files/qtwebkit-5.212*.patch
+
+# Qt5 5.11 branch, current release
+dev-qt/*/*-5.11.*
+dev-qt/*/files/*-5.11.*
+dev-qt/qtdeclarative/files/qtdeclartative-5.4.2-disable-jit.patch
+dev-qt/qtspeech/files/qtspeech-5.9.4-nogui.patch
+dev-qt/qtwebengine/files/qtwebengine-5.9.6-gcc8.patch
+dev-qt/qtwebengine/files/qtwebengine-5.9.3-paxmark-mksnapshot.patch

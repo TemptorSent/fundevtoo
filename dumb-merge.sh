@@ -85,21 +85,34 @@ for mykit in ${KITLIST} ; do
 	REPO_SUBDIR=""
 	GIT_REF="master"
 	allregex=""
+
+	do_run_patch() { src_repo_patchset "${REPO_NAME_PATCH}${REPO_SUBDIR_PATCH:+/${REPO_SUBDIR_PATCH}}" "${GIT_REF_PATCH}" "${REPO_DEST_PATCHES}/${mykit}-${REPO_NAME_PATCH}-${GIT_REF_PATCH}.patch" "${allregex}" ; }
+
 	while read -r myregex; do
+		REPO_NAME_PATCH="${REPO_NAME}"
+		REPO_SUBDIR_PATCH="${REPO_SUBDIR}"
+		GIT_REF_PATCH="${GIT_REF}"
 		case "${myregex}" in
 			"#REPO_NAME="*)
 				# If we're going to swtich to a new repo, we need to generate the patchset for the last one before we change anything.
-				[ -n "${REPO_NAME}" ] && src_repo_patchset "${REPO_NAME}${REPO_SUBDIR:+/${REPO_SUBDIR}}" "${GIT_REF}" "${REPO_DEST_PATCHES}/${mykit}-${REPO_NAME}-${GIT_REF}.patch" "${allregex}"
 				REPO_NAME="${myregex#\#REPO_NAME=}"
+				[ -n "${REPO_NAME_PATCH}" ] && [ "${REPO_NAME_PATCH}" != "${REPO_NAME}" ] && run_patch=1
 				src_repo_setup "${REPO_NAME}"
 			;;
-			"#REPO_SUBDIR="*) REPO_SUBDIR="${myregex#\#REPO_SUBDIR=}" ;;
-			"#GIT_REF="*) GIT_REF="${myregex#\#GIT_REF=}" ;;
+			"#REPO_SUBDIR="*) REPO_SUBDIR="${myregex#\#REPO_SUBDIR=}" ; [ "${REPO_SUBDIR_PATCH}" = "${REPO_SUBDIR}" ] || run_patch=1;;
+			"#GIT_REF="*) GIT_REF="${myregex#\#GIT_REF=}" ; [ "${REPO_SUBDIR_PATCH}" = "${REPO_SUBDIR}" ] || run_patch=1;;
 			"#"*) : ;;
 			[a-z]*) allregex="${allregex} ${myregex}" ;;
 		esac
+
+		if [ -z "${allregex}" ] ; then
+			run_patch=0
+		elif [ ${run_patch} -gt 0 ] ; then
+			do_run_patch && run_patch=0 && allregex=""
+		fi
+
 	done < "${mykit}.kit"
-	src_repo_patchset "${REPO_NAME}${REPO_SUBDIR:+/${REPO_SUBDIR}}" "${GIT_REF}" "${REPO_DEST_PATCHES}/${mykit}-${REPO_NAME}-${GIT_REF}.patch" "${allregex}"
+	[ -n "${allregex}" ] && do_run_patch
 
 done
 

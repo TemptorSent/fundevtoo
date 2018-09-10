@@ -1,15 +1,14 @@
-#REPO_NAME=gentoo
-#GIT_REF=master
+#REPOREFS=gentoo@master
 
 # Eclasses
 eclass/qt5*
 
 # Ebuilds not following release (may be common with other branches)
 dev-qt/qtchooser/qtchooser-0_p20170803.ebuild
-qtlockedfile/qtlockedfile-2.4.1_p20171024.ebuild
-qtlockedfile/files/qtlockedfile.prf
-qtsingleapplication/qtsingleapplication-2.6.1_p20171024.ebuild
-qtsingleapplication/files/qtsingleapplication-2.6.1_p20171024*.patch
+dev-qt/qtlockedfile/qtlockedfile-2.4.1_p20171024.ebuild
+dev-qt/qtlockedfile/files/qtlockedfile.prf
+dev-qt/qtsingleapplication/qtsingleapplication-2.6.1_p20171024.ebuild
+dev-qt/qtsingleapplication/files/qtsingleapplication-2.6.1_p20171024*.patch
 
 # Ebuild on (or nearest) branch, but not exact release triple
 dev-qt/qtwebkit/*-5.9.1*

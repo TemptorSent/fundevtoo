@@ -12,7 +12,7 @@ mkdir -p "${REPO_DEST_PATCHES}"
 
 # Setup a repo if it doesn't exist.
 src_repo_setup() {
-	local repo_name="$(get_repo_name "${1}")"
+	local repo_name="$(get_reporef_name "${1}")"
 	local repo_root="$(get_repo_root "${repo_name}")"
 	local repo_uri="$(get_repo_uri "${repo_name}")"
 	if ! [ -d "${repo_root}" ] ; then
@@ -23,14 +23,28 @@ src_repo_setup() {
 	fi
 }
 
+# reporef format <reponame>[/<path/under/git/root>][@<git-commit-ref>]
+
 # Get just the repo name, hacking off any path passed after it.
-get_repo_name() { printf -- "${1%%/*}" ; }
-# Get just the subdir of the repo, if given.
-get_repo_subdir() { [ "${1}" == "${1#*/}" ] || printf -- "${1#*/}" ; }
+get_reporef_name() { local n="${1%@*}" ; printf -- "${n%%/*}" ; }
+
+# Get just the subdir under the repo-root, if given.
+get_reporef_subdir() { local s="${1%@*}" ; [ "${s}" == "${s#*/}" ] || printf -- "${s#*/}" ; }
+
+# Get just the git-ref (commit/tag/etc) under the repo-root, if given, follows @ sign. Default to 'master' if none given.
+get_reporef_gitref() { [ "${1}" == "${1##*@}}" ] && printf -- "master" || printf -- "${1##*@}" ; }
+
+# Get a full path in the repo.
+get_reporef_path() {
+	local repo_root="$(get_repo_root "${1}")"
+	local repo_subdir="$(get_reporef_subdir "${1}")"
+	printf -- "${repo_root}${repo_subdir:+/${repo_subdir}}"
+}
 
 # Get the repo root, prefix relative paths with ${REPO_SRC_ROOT}
 get_repo_root() {
-	local repo_root="$(get_repo_field "${1}" "root")"
+	local repo_name="$(get_reporef_name "${1}")"
+	local repo_root="$(get_repo_field "${repo_name}" "root")"
 	case "${repo_root}" in
 		"."/*|".."/*|"/"*) printf -- "${repo_root}" ;;
 		[_[:alnum:]]*) printf -- "${REPO_SRC_ROOT}/${repo_root}" ;;
@@ -38,19 +52,13 @@ get_repo_root() {
 	esac
 }
 
-# Get a full path in the repo.
-get_repo_path() {
-	local repo_root="$(get_repo_root "${1}")"
-	local repo_subdir="$(get_repo_subdir "${1}")"
-	printf -- "${repo_root}${repo_subdir:+/${repo_subdir}}"
-}
 
 # Get the uri for the repo.
 get_repo_uri() { get_repo_field "${1}" "uri" ; }
 
 # Get the value of the requested field from the ${REPO_LIST_FILE}
 get_repo_field() {
-	local repo_name="$(get_repo_name "${1}")"
+	local repo_name="$(get_reporef_name "${1}")"
 	field_name="${2}"
 	case "${field_name}" in
 		name) field_num=1;;
@@ -61,14 +69,16 @@ get_repo_field() {
 	awk '$1=="'"${repo_name}"'" { print $'"${field_num}"' }' "${REPO_LIST_FILE}"
 }
 
+# Extract a patchset against the specified reporef for the files matched by the regex passed as the remaining args.
 src_repo_patchset() {
-	local repo_name="${1}"
+	local repo_name="$(get_reporef_name ${1})"
+	local repo_subdir="$(get_reporef_subdir ${1})"
+	local git_ref="$(get_reporef_gitref ${1})"
 	local repo_root="$(get_repo_root "${repo_name}")"
-	local git_ref="${2}"
-	local patchfile="${3}"
-	shift 3
+	local patchfile="${2}"
+	shift 2
 	local patterns="$@"
-	(set -f ; cd "${repo_root}" && git log --pretty=email --patch-with-stat --reverse --full-index --binary ${git_ref} -- ${patterns} ) > "${patchfile}"
+	(set -f ; cd "${repo_root}${repo_subdir:+/${repo_subdir}}" && git log --pretty=email --patch-with-stat --reverse --full-index --binary ${git_ref} -- ${patterns} ) >> "${patchfile}"
 }
 
 
@@ -81,38 +91,62 @@ while read -r mykit; do
 done < kit.list
 
 for mykit in ${KITLIST} ; do
-	REPO_NAME=""
-	REPO_SUBDIR=""
-	GIT_REF="master"
+	ALLREPOREFS=""
+	REPOREFS=""
 	allregex=""
 
-	do_run_patch() { src_repo_patchset "${REPO_NAME_PATCH}${REPO_SUBDIR_PATCH:+/${REPO_SUBDIR_PATCH}}" "${GIT_REF_PATCH}" "${REPO_DEST_PATCHES}/${mykit}-${REPO_NAME_PATCH}-${GIT_REF_PATCH}.patch" "${allregex}" ; }
+	# Local function, needs to be called in scope of main loop.
+	do_extract_patches() {
+		[ -n "${REPOREFS_LAST}" ] && [ -n "${allregex}" ] || return
+		for myrr in ${REPOREFS_LAST} ; do
+			local myreponame="$(get_reporef_name "${myrr}")"
+			local myreposubdir="$(get_reporef_subdir "${myrr}")"
+			local myreposubdir_="$(printf -- "${myreposubdir}" | tr '/' '_')"
+			local myrepogitref="$(get_reporef_gitref "${myrr}")"
 
+			# This gives a filename that should be unique to reporef unless there is some crazy '_' action going on in paths.
+			local mypatch="${REPO_DEST_PATCHES}/${mykit}-${myreponame}${myreposubdir_:+_${myreposubdir_}}@${myrepogitref}.patch"
+
+			# Give the user an idea what's going on ;)
+			printf -- "\nExtracting patchset for '${mykit}' from '${myrr}' to '${mypatch}'"
+
+			# If we haven't seen this reporef before, wipe the patch and start fresh.
+			( printf -- "${ALLREPOREFS}" | grep -qw "${myrr}[^/@]" ) && printf -- ".\n" || ( printf -- "" > "${mypatch}" && printf -- " (Cleared old).\n")
+
+			# If we haven't seen this repo yet, set it up.
+			( printf -- "${ALLREPOREFS}" | grep -qw "${myrr}" ) || src_repo_setup "${myreponame}"
+
+
+			# Extract this set of patches
+			printf -- "Selecting files in repo under '$(get_reporef_path ${myrr})' matching regex:\n\n"
+			printf -- "${allregex}" | tr ' ' '\n' | column -t
+			printf -- "\n"
+			src_repo_patchset "${myrr}" "${mypatch}" "${allregex}"
+			printf -- "...done...\n\n"
+			# Add this reporef to the list of all we've seen
+			ALLREPOREFS="${ALLREPOREFS:+${ALLREPOREFS} }${myrr}"
+		done
+	}
+
+	REPOREFS_TOK="#REPOREFS="
 	while read -r myregex; do
-		REPO_NAME_PATCH="${REPO_NAME}"
-		REPO_SUBDIR_PATCH="${REPO_SUBDIR}"
-		GIT_REF_PATCH="${GIT_REF}"
 		case "${myregex}" in
-			"#REPO_NAME="*)
+			"${REPOREFS_TOK}"*)
 				# If we're going to swtich to a new repo, we need to generate the patchset for the last one before we change anything.
-				REPO_NAME="${myregex#\#REPO_NAME=}"
-				[ -n "${REPO_NAME_PATCH}" ] && [ "${REPO_NAME_PATCH}" != "${REPO_NAME}" ] && run_patch=1
-				src_repo_setup "${REPO_NAME}"
+				REPOREFS_LAST="${REPOREFS}"
+				REPOREFS="${myregex#"${REPOREFS_TOK}"}"
+				do_extract_patches && allregex=""
 			;;
-			"#REPO_SUBDIR="*) REPO_SUBDIR="${myregex#\#REPO_SUBDIR=}" ; [ "${REPO_SUBDIR_PATCH}" = "${REPO_SUBDIR}" ] || run_patch=1;;
-			"#GIT_REF="*) GIT_REF="${myregex#\#GIT_REF=}" ; [ "${REPO_SUBDIR_PATCH}" = "${REPO_SUBDIR}" ] || run_patch=1;;
 			"#"*) : ;;
 			[a-z]*) allregex="${allregex} ${myregex}" ;;
 		esac
-
-		if [ -z "${allregex}" ] ; then
-			run_patch=0
-		elif [ ${run_patch} -gt 0 ] ; then
-			do_run_patch && run_patch=0 && allregex=""
-		fi
-
 	done < "${mykit}.kit"
-	[ -n "${allregex}" ] && do_run_patch
+
+	# We found the end of the file.
+	# Process the last set of reporefs seen with the current ${allregex} value.
+	REPOREFS_LAST="${REPOREFS}"
+	REPOREFS=""
+	do_extract_patches
 
 done
 

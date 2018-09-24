@@ -78,7 +78,9 @@ src_repo_patchset() {
 	local patchfile="${2}"
 	shift 2
 	local patterns="$@"
-	(set -f ; cd "${repo_root}${repo_subdir:+/${repo_subdir}}" && git log --pretty=email --patch-with-stat --reverse --full-index --binary ${git_ref} -- ${patterns} ) >> "${patchfile}"
+	#(set -f ; cd "${repo_root}${repo_subdir:+/${repo_subdir}}" && git log --pretty=email --patch-with-stat --reverse --full-index --binary ${git_ref} -- ${patterns} ) >> "${patchfile}"
+	#(set -f ; cd "${repo_root}${repo_subdir:+/${repo_subdir}}" && git log --pretty=email --patch-with-stat --reverse --full-index ${repo_subdir:+--relative="${repo_subdir}"} --break-rewrites=40%/70% --find-renames=20% --find-copies=20% --find-copies-harder --binary ${git_ref} -- ${patterns} ) >> "${patchfile}"
+	(set -f ; cd "${repo_root}${repo_subdir:+/${repo_subdir}}" && git log --pretty=email --patch-with-stat --topo-order --reverse --full-index ${repo_subdir:+--relative="${repo_subdir}"} --break-rewrites=40%/70% --find-renames=20% --binary ${git_ref} -- ${patterns} ) >> "${patchfile}"
 }
 
 
@@ -124,8 +126,47 @@ for mykit in ${KITLIST} ; do
 			src_repo_patchset "${myrr}" "${mypatch}" "${allregex}"
 			printf -- "...done...\n\n"
 			# Add this reporef to the list of all we've seen
-			ALLREPOREFS="${ALLREPOREFS:+${ALLREPOREFS} }${myrr}"
+			ALLREPOREFS="${myrr}${ALLREPOREFS:+ ${ALLREPOREFS}}"
 		done
+	}
+	do_merge_patches() {
+		local patchdir="$(realpath "${REPO_DEST_PATCHES}")"
+		local mykitdir="${REPO_DEST_ROOT}/${mykit}"
+		if [ -e "${mykitdir}" ] ; then
+			if [ -d "${mykitdir}/.git" ] ; then
+				printf -- "Removing old git repo at '${mykitdir}'.\n"
+				rm -rf "${mykitdir}"
+			else
+				printf -- "'${mykitdir}' is not a git repo root, not touching it and bailing!\n"
+				exit 1
+			fi
+		fi
+		mkdir -p "${mykitdir}"
+		pushd "${mykitdir}" > /dev/null
+			git init . && git commit -m "Root Commit" --allow-empty && git checkout -b merged
+			for myrr in ${ALLREPOREFS} ; do
+				local myreponame="$(get_reporef_name "${myrr}")"
+				local myreposubdir="$(get_reporef_subdir "${myrr}")"
+				local myreposubdir_="$(printf -- "${myreposubdir}" | tr '/' '_')"
+				local myrepogitref="$(get_reporef_gitref "${myrr}")"
+
+				# This gives a filename that should be unique to reporef unless there is some crazy '_' action going on in paths.
+				local myrepopath_="${myreponame}${myreposubdir_:+_${myreposubdir_}}"
+				local mypatch="${patchdir}/${mykit}-${myrepopath_}@${myrepogitref}.patch"
+
+				# Give the user an idea what's going on ;)
+				printf -- "\nMerging patchset for '${myrr}' from '${mypatch}' to '${REPO_DEST_ROOT}/${mykit}'"
+
+				git checkout master
+				git checkout -b "${myrepopath_}"
+				git am "${mypatch}"
+				git checkout merged
+				git merge --no-commit "${myrepopath_}"
+				git checkout --ours .
+				git add .
+				git commit -m "Merged '${myrepopath_}' branch into 'merged'."
+			done
+		popd > /dev/null
 	}
 
 	REPOREFS_TOK="#REPOREFS="
@@ -147,6 +188,7 @@ for mykit in ${KITLIST} ; do
 	REPOREFS_LAST="${REPOREFS}"
 	REPOREFS=""
 	do_extract_patches
+	do_merge_patches
 
 done
 

@@ -98,8 +98,28 @@ for mykit in ${KITLIST} ; do
 	allregex=""
 
 	# Local function, needs to be called in scope of main loop.
-	do_extract_patches() {
+	do_extract_and_merge_patches() {
+		# Short-circuit return if we have nothign to do.
 		[ -n "${REPOREFS_LAST}" ] && [ -n "${allregex}" ] || return
+
+		# Setup our paths to store patches and dest git repo
+		local mypatchdir="$(realpath "${REPO_DEST_PATCHES}")"
+		local mykitgitdir="${REPO_DEST_ROOT}/${mykit}"
+
+		# Wipe our repo dir and start from scratch -- complain if we don't see what we expect.
+		if [ -e "${mykitgitdir}" ] ; then
+			if [ -d "${mykitgitdir}/.git" ] ; then
+				printf -- "Removing old git repo at '${mykitgitdir}'.\n"
+				rm -rf "${mykitgitdir}"
+			else
+				printf -- "'${mykitgitdir}' is not a git repo root, not touching it and bailing!\n"
+				exit 1
+			fi
+		fi
+		mkdir -p "${mykitgitdir}"
+		( cd "${mykitgitdir}" && git init . && git commit -m "Root Commit for ${mykit}" --allow-empty && git checkout -b merged )
+
+		# Iterate over reporefs on the stack, extract the patches, and apply them to merged branch.
 		for myrr in ${REPOREFS_LAST} ; do
 			local myreponame="$(get_reporef_name "${myrr}")"
 			local myreposubdir="$(get_reporef_subdir "${myrr}")"
@@ -107,7 +127,8 @@ for mykit in ${KITLIST} ; do
 			local myrepogitref="$(get_reporef_gitref "${myrr}")"
 
 			# This gives a filename that should be unique to reporef unless there is some crazy '_' action going on in paths.
-			local mypatch="${REPO_DEST_PATCHES}/${mykit}-${myreponame}${myreposubdir_:+_${myreposubdir_}}@${myrepogitref}.patch"
+			local myrepopath_="${myreponame}${myreposubdir_:+_${myreposubdir_}}"
+			local mypatch="${mypatchdir}/${mykit}-${myrepopath_}@${myrepogitref}.patch"
 
 			# Give the user an idea what's going on ;)
 			printf -- "\nExtracting patchset for '${mykit}' from '${myrr}' to '${mypatch}'"
@@ -127,46 +148,26 @@ for mykit in ${KITLIST} ; do
 			printf -- "...done...\n\n"
 			# Add this reporef to the list of all we've seen
 			ALLREPOREFS="${ALLREPOREFS:+${ALLREPOREFS} }${myrr}"
-		done
-	}
-	do_merge_patches() {
-		local patchdir="$(realpath "${REPO_DEST_PATCHES}")"
-		local mykitdir="${REPO_DEST_ROOT}/${mykit}"
-		if [ -e "${mykitdir}" ] ; then
-			if [ -d "${mykitdir}/.git" ] ; then
-				printf -- "Removing old git repo at '${mykitdir}'.\n"
-				rm -rf "${mykitdir}"
-			else
-				printf -- "'${mykitdir}' is not a git repo root, not touching it and bailing!\n"
-				exit 1
-			fi
-		fi
-		mkdir -p "${mykitdir}"
-		pushd "${mykitdir}" > /dev/null
-			git init . && git commit -m "Root Commit" --allow-empty && git checkout -b merged
-			for myrr in ${ALLREPOREFS} ; do
-				local myreponame="$(get_reporef_name "${myrr}")"
-				local myreposubdir="$(get_reporef_subdir "${myrr}")"
-				local myreposubdir_="$(printf -- "${myreposubdir}" | tr '/' '_')"
-				local myrepogitref="$(get_reporef_gitref "${myrr}")"
 
-				# This gives a filename that should be unique to reporef unless there is some crazy '_' action going on in paths.
-				local myrepopath_="${myreponame}${myreposubdir_:+_${myreposubdir_}}"
-				local mypatch="${patchdir}/${mykit}-${myrepopath_}@${myrepogitref}.patch"
-
+			# Merge the patch we just generated into our kit's repo`
+			pushd "${mykitgitdir}" > /dev/null
 				# Give the user an idea what's going on ;)
-				printf -- "\nMerging patchset for '${myrr}' from '${mypatch}' to '${REPO_DEST_ROOT}/${mykit}'"
-
+				printf -- "\nMerging patchset for '${myrr}' from '${mypatch}' to '${mykitgitdir}'"
+				# Create new branch for each patcheset
 				git checkout master
 				git checkout -b "${myrepopath_}"
+				# Apply our patchset to that branch
 				git am "${mypatch}"
+				# Switch to 'merged' branch and attempt to merge our new patcheset branch
 				git checkout merged
 				git merge --no-commit "${myrepopath_}"
+				# Resolve conflicts by always taking the version from the branch being merged in
 				git checkout --theirs .
+				# Add resoutions and commit.
 				git add .
 				git commit -m "Merged '${myrepopath_}' branch into 'merged'."
-			done
-		popd > /dev/null
+			popd > /dev/null
+		done
 	}
 
 	REPOREFS_TOK="#REPOREFS="
@@ -176,7 +177,7 @@ for mykit in ${KITLIST} ; do
 				# If we're going to swtich to a new repo, we need to generate the patchset for the last one before we change anything.
 				REPOREFS_LAST="${REPOREFS}"
 				REPOREFS="${myregex#"${REPOREFS_TOK}"}"
-				do_extract_patches && allregex=""
+				do_extract_and_merge_patches && allregex=""
 			;;
 			"#"*) : ;;
 			[a-z]*) allregex="${allregex} ${myregex}" ;;
@@ -187,8 +188,7 @@ for mykit in ${KITLIST} ; do
 	# Process the last set of reporefs seen with the current ${allregex} value.
 	REPOREFS_LAST="${REPOREFS}"
 	REPOREFS=""
-	do_extract_patches
-	do_merge_patches
+	do_extract_and_merge_patches
 
 done
 

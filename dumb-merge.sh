@@ -126,7 +126,7 @@ for mykit in ${KITLIST} ; do
 			src_repo_patchset "${myrr}" "${mypatch}" "${allregex}"
 			printf -- "...done...\n\n"
 			# Add this reporef to the list of all we've seen
-			ALLREPOREFS="${myrr}${ALLREPOREFS:+ ${ALLREPOREFS}}"
+			ALLREPOREFS="${ALLREPOREFS:+${ALLREPOREFS} }${myrr}"
 		done
 	}
 	do_merge_patches() {
@@ -162,7 +162,7 @@ for mykit in ${KITLIST} ; do
 				git am "${mypatch}"
 				git checkout merged
 				git merge --no-commit "${myrepopath_}"
-				git checkout --ours .
+				git checkout --theirs .
 				git add .
 				git commit -m "Merged '${myrepopath_}' branch into 'merged'."
 			done

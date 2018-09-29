@@ -69,21 +69,6 @@ get_repo_field() {
 	awk '$1=="'"${repo_name}"'" { print $'"${field_num}"' }' "${REPO_LIST_FILE}"
 }
 
-# Extract a patchset against the specified reporef for the files matched by the regex passed as the remaining args.
-src_repo_patchset() {
-	local repo_name="$(get_reporef_name ${1})"
-	local repo_subdir="$(get_reporef_subdir ${1})"
-	local git_ref="$(get_reporef_gitref ${1})"
-	local repo_root="$(get_repo_root "${repo_name}")"
-	local patchfile="${2}"
-	shift 2
-	local patterns="$@"
-	#(set -f ; cd "${repo_root}${repo_subdir:+/${repo_subdir}}" && git log --pretty=email --patch-with-stat --reverse --full-index --binary ${git_ref} -- ${patterns} ) >> "${patchfile}"
-	#(set -f ; cd "${repo_root}${repo_subdir:+/${repo_subdir}}" && git log --pretty=email --patch-with-stat --reverse --full-index ${repo_subdir:+--relative="${repo_subdir}"} --break-rewrites=40%/70% --find-renames=20% --find-copies=20% --find-copies-harder --binary ${git_ref} -- ${patterns} ) >> "${patchfile}"
-	(set -f ; cd "${repo_root}${repo_subdir:+/${repo_subdir}}" && git log --pretty=email --patch-with-stat --topo-order --reverse --full-index ${repo_subdir:+--relative="${repo_subdir}"} --break-rewrites=40%/70% --find-renames=20% --binary ${git_ref} -- ${patterns} ) >> "${patchfile}"
-}
-
-
 # Load list of kits to generate
 while read -r mykit; do
 	case "${mykit}" in
@@ -95,12 +80,12 @@ done < kit.list
 for mykit in ${KITLIST} ; do
 	ALLREPOREFS=""
 	REPOREFS=""
-	allregex=""
+	allglobs=""
 
 	# Local function, needs to be called in scope of main loop.
 	do_extract_and_merge_patches() {
 		# Short-circuit return if we have nothign to do.
-		[ -n "${REPOREFS_LAST}" ] && [ -n "${allregex}" ] || return
+		[ -n "${REPOREFS_LAST}" ] && [ -n "${allglobs}" ] || return
 
 		# Setup our paths to store patches and dest git repo
 		local mypatchdir="$(realpath "${REPO_DEST_PATCHES}")"
@@ -122,13 +107,17 @@ for mykit in ${KITLIST} ; do
 		# Iterate over reporefs on the stack, extract the patches, and apply them to merged branch.
 		for myrr in ${REPOREFS_LAST} ; do
 			local myreponame="$(get_reporef_name "${myrr}")"
+			local myreporoot="$(get_repo_root "${myrr}")"
 			local myreposubdir="$(get_reporef_subdir "${myrr}")"
 			local myreposubdir_="$(printf -- "${myreposubdir}" | tr '/' '_')"
 			local myrepogitref="$(get_reporef_gitref "${myrr}")"
 
+			# Fetch our hash for the git_ref
+			local myrepohash="$(cd "${myreporoot}${myreposubdir:+/${myreposubdir}}" && git rev-parse "${myrepogitref}" )"
+
 			# This gives a filename that should be unique to reporef unless there is some crazy '_' action going on in paths.
 			local myrepopath_="${myreponame}${myreposubdir_:+_${myreposubdir_}}"
-			local mypatch="${mypatchdir}/${mykit}-${myrepopath_}@${myrepogitref}.patch"
+			local mypatch="${mypatchdir}/${mykit}-${myrepopath_}@${myrepogitref}#${myrepohash}.patch"
 
 			# Give the user an idea what's going on ;)
 			printf -- "\nExtracting patchset for '${mykit}' from '${myrr}' to '${mypatch}'"
@@ -142,9 +131,16 @@ for mykit in ${KITLIST} ; do
 
 			# Extract this set of patches
 			printf -- "Selecting files in repo under '$(get_reporef_path ${myrr})' matching regex:\n\n"
-			printf -- "${allregex}" | tr ' ' '\n' | column -t
+			printf -- "${allglobs}" | tr ' ' '\n' | column -t
 			printf -- "\n"
-			src_repo_patchset "${myrr}" "${mypatch}" "${allregex}"
+			(	set -f
+				cd "${myreporoot}${myreposubdir:+/${myreposubdir}}" \
+					&& git log \
+						--binary --pretty=email --patch-with-stat --topo-order --reverse --full-index ${myreposubdir:+--relative="${myreposubdir}"} \
+						--break-rewrites=40%/70% --find-renames=20% \
+						${myrepohash} -- ${allglobs}
+			) >> "${mypatch}"
+			#src_repo_patchset "${myrr}" "${mypatch}" "${allglobs}"
 			printf -- "...done...\n\n"
 			# Add this reporef to the list of all we've seen
 			ALLREPOREFS="${ALLREPOREFS:+${ALLREPOREFS} }${myrr}"
@@ -171,21 +167,21 @@ for mykit in ${KITLIST} ; do
 	}
 
 	REPOREFS_TOK="#REPOREFS="
-	while read -r myregex; do
-		case "${myregex}" in
+	while read -r myglob; do
+		case "${myglob}" in
 			"${REPOREFS_TOK}"*)
 				# If we're going to swtich to a new repo, we need to generate the patchset for the last one before we change anything.
 				REPOREFS_LAST="${REPOREFS}"
-				REPOREFS="${myregex#"${REPOREFS_TOK}"}"
-				do_extract_and_merge_patches && allregex=""
+				REPOREFS="${myglob#"${REPOREFS_TOK}"}"
+				do_extract_and_merge_patches && allglobs=""
 			;;
 			"#"*) : ;;
-			[a-z]*) allregex="${allregex} ${myregex}" ;;
+			[a-z]*) allglobs="${allglobs} ${myglob}" ;;
 		esac
 	done < "${mykit}.kit"
 
 	# We found the end of the file.
-	# Process the last set of reporefs seen with the current ${allregex} value.
+	# Process the last set of reporefs seen with the current ${allglobs} value.
 	REPOREFS_LAST="${REPOREFS}"
 	REPOREFS=""
 	do_extract_and_merge_patches

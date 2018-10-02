@@ -1,5 +1,8 @@
-qt-master
+#qt-master
 qt5-5.11
-qt5-5.9
-qt4-4.8
+#qt5-5.9
+#qt4-4.8
+#
+kde-frameworks-5.50
+kde-plasma-5.13
 llvm-master

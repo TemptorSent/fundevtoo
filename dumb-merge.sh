@@ -10,6 +10,12 @@ REPO_DEST_PATCHES="${REPO_DEST_ROOT}/patchsets"
 mkdir -p "${REPO_SRC_ROOT}"
 mkdir -p "${REPO_DEST_PATCHES}"
 
+# Bail out! function
+die() {
+	printf -- '%s\n' "$*"
+	exit 1
+}
+
 # Setup a repo if it doesn't exist.
 src_repo_setup() {
 	local repo_name="$(get_reporef_name "${1}")"
@@ -69,40 +75,55 @@ get_repo_field() {
 	awk '$1=="'"${repo_name}"'" { print $'"${field_num}"' }' "${REPO_LIST_FILE}"
 }
 
+
 # Load list of kits to generate
+[ -f "kit.list" ] || die "No file 'kit.list' to read list of kits to generate!"
 while read -r mykit; do
 	case "${mykit}" in
-		"#"*) : ;;
-		[_[:alnum:]]*) KITLIST="${KITLIST:+${KITLIST} }${mykit}" ;;
+		"#"*)
+			# Comment, do nothing
+			:
+		;;
+		[_[:alnum:]]*)
+			# Add this kit to list of kits to generate
+			KITLIST="${KITLIST:+${KITLIST} }${mykit}"
+		;;
 	esac
 done < kit.list
 
+# Define the token to look for to find REPOREFS
+REPOREFS_TOK="#REPOREFS="
+
+# Iterate over the list of kits in KITLIST, extracting branches and merging all branches for each, in order.
 for mykit in ${KITLIST} ; do
+	# Clear our globals before we start
 	ALLREPOREFS=""
 	REPOREFS=""
 	allglobs=""
+
+	# Setup our paths to store patches and dest git repo
+	mypatchdir="$(realpath "${REPO_DEST_PATCHES}")"
+	mykitgitdir="${REPO_DEST_ROOT}/${mykit}"
+
+	# Wipe our repo dir so we can start from scratch -- complain if we find something other than a git root.
+	if [ -e "${mykitgitdir}" ] ; then
+		if [ -d "${mykitgitdir}/.git" ] ; then
+			printf -- "Removing old git repo at '${mykitgitdir}'.\n"
+			rm -rf "${mykitgitdir}" || die "Could not remove old git repo '${mykitgitdir}'!"
+		else
+			die "'${mykitgitdir}' is not a git repo root, not touching it and bailing!"
+		fi
+	fi
+
+	# Initilize our repo from scratch.
+	mkdir -p "${mykitgitdir}" || die "Could not create directory '${mykitgitdir}' for kit '${mykit}'!"
+	( cd "${mykitgitdir}" && git init . && git commit -m "Root Commit for ${mykit}" --allow-empty && git checkout -b merged ) || die "Could not initilize new repo '${mykitgitdir}' for kit '${mykit}'!"
 
 	# Local function, needs to be called in scope of main loop.
 	do_extract_and_merge_patches() {
 		# Short-circuit return if we have nothign to do.
 		[ -n "${REPOREFS_LAST}" ] && [ -n "${allglobs}" ] || return
 
-		# Setup our paths to store patches and dest git repo
-		local mypatchdir="$(realpath "${REPO_DEST_PATCHES}")"
-		local mykitgitdir="${REPO_DEST_ROOT}/${mykit}"
-
-		# Wipe our repo dir and start from scratch -- complain if we don't see what we expect.
-		if [ -e "${mykitgitdir}" ] ; then
-			if [ -d "${mykitgitdir}/.git" ] ; then
-				printf -- "Removing old git repo at '${mykitgitdir}'.\n"
-				rm -rf "${mykitgitdir}"
-			else
-				printf -- "'${mykitgitdir}' is not a git repo root, not touching it and bailing!\n"
-				exit 1
-			fi
-		fi
-		mkdir -p "${mykitgitdir}"
-		( cd "${mykitgitdir}" && git init . && git commit -m "Root Commit for ${mykit}" --allow-empty && git checkout -b merged )
 
 		# Iterate over reporefs on the stack, extract the patches, and apply them to merged branch.
 		for myrr in ${REPOREFS_LAST} ; do
@@ -123,10 +144,10 @@ for mykit in ${KITLIST} ; do
 			printf -- "\nExtracting patchset for '${mykit}' from '${myrr}' to '${mypatch}'"
 
 			# If we haven't seen this reporef before, wipe the patch and start fresh.
-			( printf -- "${ALLREPOREFS}" | grep -qw "${myrr}[^/@]" ) && printf -- ".\n" || ( printf -- "" > "${mypatch}" && printf -- " (Cleared old).\n")
+			( printf -- "${ALLREPOREFS}" | grep -qw "${myrr}[^-/@]" ) && printf -- ".\n" || ( printf -- "" > "${mypatch}" && printf -- " (Cleared old).\n")
 
 			# If we haven't seen this repo yet, set it up.
-			( printf -- "${ALLREPOREFS}" | grep -qw "${myrr}" ) || src_repo_setup "${myreponame}"
+			( printf -- "${ALLREPOREFS}" | grep -qw "${myreponame}\([/@][^[:space:]]*\)\?" ) || src_repo_setup "${myreponame}" || die "Couldn't setup repo '${myreponame}'."
 
 
 			# Extract this set of patches
@@ -139,14 +160,14 @@ for mykit in ${KITLIST} ; do
 						--binary --pretty=email --patch-with-stat --topo-order --reverse --full-index ${myreposubdir:+--relative="${myreposubdir}"} \
 						--break-rewrites=40%/70% --find-renames=20% \
 						${myrepohash} -- ${allglobs}
-			) >> "${mypatch}"
-			#src_repo_patchset "${myrr}" "${mypatch}" "${allglobs}"
+			) >> "${mypatch}" || die "Could not extract patch '${mypatch}' from '${myrr}'!"
 			printf -- "...done...\n\n"
+
 			# Add this reporef to the list of all we've seen
 			ALLREPOREFS="${ALLREPOREFS:+${ALLREPOREFS} }${myrr}"
 
 			# Merge the patch we just generated into our kit's repo`
-			pushd "${mykitgitdir}" > /dev/null
+			pushd "${mykitgitdir}" > /dev/null || die "Could not change to '${mykitgitdir}'!"
 				# Give the user an idea what's going on ;)
 				printf -- "\nMerging patchset for '${myrr}' from '${mypatch}' to '${mykitgitdir}'"
 				# Create new branch for each patcheset
@@ -166,17 +187,26 @@ for mykit in ${KITLIST} ; do
 		done
 	}
 
-	REPOREFS_TOK="#REPOREFS="
+	# Read lines from the current kit file as globs to add to our list to extract
+	[ -f "${mykit}.kit" ] || die "No '${mykit}.kit' file found for '${mykit}'!"
 	while read -r myglob; do
+		# Parse this line
 		case "${myglob}" in
 			"${REPOREFS_TOK}"*)
 				# If we're going to swtich to a new repo, we need to generate the patchset for the last one before we change anything.
 				REPOREFS_LAST="${REPOREFS}"
 				REPOREFS="${myglob#"${REPOREFS_TOK}"}"
+				# Extract and merge the last set of patches, then clear allglobs so we start fresh for the next reporef
 				do_extract_and_merge_patches && allglobs=""
 			;;
-			"#"*) : ;;
-			[a-z]*) allglobs="${allglobs} ${myglob}" ;;
+			"#"*)
+				# Found comment, do nothing using ':' command
+				:
+			;;
+			[a-z]*)
+				# Add this glob to the list of all globs to extract
+				allglobs="${allglobs} ${myglob}"
+			;;
 		esac
 	done < "${mykit}.kit"
 

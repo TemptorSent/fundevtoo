@@ -1,0 +1,35 @@
+#REPOREFS=gentoo@master
+
+# Metadata
+kde-plasma/metadata.xml
+
+# Eclasses
+eclass/kde5.eclass
+
+# Ebuilds not following release (may be common with other branches)
+kde-frameworks/kf-env
+
+# Ebuild on (or nearest) branch, but not exact release triple
+
+# KDE 5.50 branch, current release
+kde-plasma/*/*-5.13.*
+kde-plasma/*/files/*-5.13.*
+kde-plasma/*/Manifest
+kde-plasma/*/metadata.xml
+
+kde-plasma/kde-cli-tools/files/kde-cli-tools-5.12.80-tests-optional.patch
+kde-plasma/kwin/files/kwin-5.10.95-test-optional.patch
+kde-plasma/kwin/files/kwin-gstreamer-optional.patch
+# Files listed explicitly, already selected commented
+#kde-plasma/oxygen/files/oxygen-5.13.5-symlinks.patch
+#kde-plasma/plasma-desktop/files/plasma-desktop-5.13.5-activityswitcher.patch
+#kde-plasma/plasma-desktop/files/plasma-desktop-5.13.5-kickersearch-nav.patch
+#kde-plasma/plasma-nm/files/plasma-nm-5.13.5-iconchange.patch
+#kde-plasma/plasma-pa/plasma-pa-5.13.3-automagic_gconf.patch
+#kde-plasma/plasma-vault/files/plasma-vault-5.13.2-nm-qt-optional.patch
+kde-plasma/plasma-workspace/files/plasma-workspace-5.4-startkde-script.patch
+kde-plasma/plasma-workspace/files/plasma-workspace-5.10-startplasmacompositor-script.patch
+kde-plasma/plasma-workspace/files/plasma-workspace-5.12.80-tests-optional.patch
+#kde-plasma/plasma-workspace/files/plasma-workspace-5.13.5-double-positions.patch
+
+

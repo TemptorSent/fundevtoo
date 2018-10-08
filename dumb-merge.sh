@@ -7,6 +7,10 @@ REPO_SRC_ROOT="../source-trees"
 REPO_DEST_ROOT="../temptorsent-dest-trees"
 REPO_DEST_PATCHES="${REPO_DEST_ROOT}/patchsets"
 
+KIT_LIST_FILE="kit.list"
+KIT_FILE_ROOT="kits"
+
+
 mkdir -p "${REPO_SRC_ROOT}"
 mkdir -p "${REPO_DEST_PATCHES}"
 
@@ -77,7 +81,7 @@ get_repo_field() {
 
 
 # Load list of kits to generate
-[ -f "kit.list" ] || die "No file 'kit.list' to read list of kits to generate!"
+[ -f "${KIT_LIST_FILE}" ] || die "No file '${KIT_LIST_FILE}' to read list of kits to generate!"
 while read -r mykit; do
 	case "${mykit}" in
 		"#"*)
@@ -89,21 +93,29 @@ while read -r mykit; do
 			KITLIST="${KITLIST:+${KITLIST} }${mykit}"
 		;;
 	esac
-done < kit.list
+done < "${KIT_LIST_FILE}"
 
 # Define the token to look for to find REPOREFS
 REPOREFS_TOK="#REPOREFS="
 
 # Iterate over the list of kits in KITLIST, extracting branches and merging all branches for each, in order.
 for mykit in ${KITLIST} ; do
-	# Clear our globals before we start
-	ALLREPOREFS=""
-	REPOREFS=""
-	allglobs=""
+	mykitfile="${KIT_FILE_ROOT:+${KIT_FILE_ROOT%/}/}${mykit}.kit"
+	# Handle kits with sub paths
+	if [ "${mykit}" = "${mykit%/*}" ] ; then
+		mykitname="${mykit}"
+		mykitsub=""
+	else
+		mykitname="${mykit##*/}"
+		mykitsub="${mykit%/*}"
+	fi
+
 
 	# Setup our paths to store patches and dest git repo
-	mypatchdir="$(realpath "${REPO_DEST_PATCHES}")"
+	mypatchdir="$(realpath "${REPO_DEST_PATCHES}${mykitsub:+/${mykitsub}}")"
+	mkdir -p "${mypatchdir}"
 	mykitgitdir="${REPO_DEST_ROOT}/${mykit}"
+
 
 	# Wipe our repo dir so we can start from scratch -- complain if we find something other than a git root.
 	if [ -e "${mykitgitdir}" ] ; then
@@ -138,7 +150,7 @@ for mykit in ${KITLIST} ; do
 
 			# This gives a filename that should be unique to reporef unless there is some crazy '_' action going on in paths.
 			local myrepopath_="${myreponame}${myreposubdir_:+_${myreposubdir_}}"
-			local mypatch="${mypatchdir}/${mykit}-${myrepopath_}@${myrepogitref}#${myrepohash}.patch"
+			local mypatch="${mypatchdir}/${mykitname}-${myrepopath_}@${myrepogitref}#${myrepohash}.patch"
 
 			# Give the user an idea what's going on ;)
 			printf -- "\nExtracting patchset for '${mykit}' from '${myrr}' to '${mypatch}'"
@@ -187,8 +199,13 @@ for mykit in ${KITLIST} ; do
 		done
 	}
 
+	# Clear our globals before we start parsing kits.
+	ALLREPOREFS=""
+	REPOREFS=""
+	allglobs=""
+
 	# Read lines from the current kit file as globs to add to our list to extract
-	[ -f "${mykit}.kit" ] || die "No '${mykit}.kit' file found for '${mykit}'!"
+	[ -f "${mykitfile}" ] || die "No '${mykitfile}' file found for '${mykit}'!"
 	while read -r myglob; do
 		# Parse this line
 		case "${myglob}" in
@@ -208,7 +225,7 @@ for mykit in ${KITLIST} ; do
 				allglobs="${allglobs} ${myglob}"
 			;;
 		esac
-	done < "${mykit}.kit"
+	done < "${mykitfile}"
 
 	# We found the end of the file.
 	# Process the last set of reporefs seen with the current ${allglobs} value.

@@ -1,0 +1,27 @@
+#REPOREFS=gentoo@master kit-fixups/core-kit/global@master kit-fixups/core-kit/curated@master kit-fixups/core-kit/1.2-prime@master
+# -- Core packages for linux-based systems
+
+# Linux kernel headers to build against:
+virtual/os-headers
+sys-kernel/linux-headers
+
+# Linux kernel sources packages:
+virtual/linux-sources
+sys-kernel/vanilla-sources
+sys-kernel/debian-sources
+sys-kernel/gentoo-sources
+
+# Kernel/initramfs generators:
+sys-kernel/dracut
+sys-kernel/genkernel
+
+# Module utilities
+virtual/modutils
+sys-apps/kmod
+
+# Linux userspace system utilities
+sys-apps/util-linux
+
+# Linux console keyboard utils
+sys-apps/kbd
+

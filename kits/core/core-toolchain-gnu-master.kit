@@ -1,9 +1,21 @@
+#REPOREFS=gentoo@master kit-fixups/core-kit/global@master kit-fixups/core-kit/curated@master kit-fixups/core-kit/1.2-prime@master
 # GNU flavor toolchain components
+
+# binutils
 sys-devel/binutils
 sys-devel/binutils-config
+
+# GCC
+virtual/fortran
 sys-devel/gcc
 sys-devel/gcc-config
 
+# Glibc and supporting libs
 sys-libs/glibc
+virtual/libintl
 net-libs/rpcsvc-proto
 net-libs/libtirpc
+
+# NSS Switch module for Multicast DNS
+sys-auth/nss-mdns
+

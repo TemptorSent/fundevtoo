@@ -1,7 +1,33 @@
+#REPOREFS=gentoo@master kit-fixups/core-kit/global@master kit-fixups/core-kit/curated@master kit-fixups/core-kit/1.2-prime@master
 # -- Core Networking packages
 
 # /etc/init.d/net.lo, and /etc/init.d/netif.tmpl & /etc/netif.d templates
 sys-apps/corenetwork
+
+# Basic network tools
+sys-apps/net-tools
+net-misc/iputils
+sys-apps/iproute2
+
+# Firewall configuration tools
+net-firewall/ebtables
+net-firewall/iptables
+net-firewall/nftables
+
+# TCP wrappers
+sys-apps/tcp-wrappers
+
+# DNS packages
+net-dns/libidn2
+net-dns/openresolv
+net-misc/whois
+net-dns/bind-tools
+
+# Network resource discovery tool:
+net-dns/avahi
+
+# YP/NIS+ packages
+net-libs/libnsl
 
 # URL handlers
 net-misc/curl
@@ -9,4 +35,8 @@ net-misc/wget
 
 # Standard networking tools
 sys-apps/net-tools
+
+# Secure Shell
+virtual/ssh
+net-misc/openssh
 

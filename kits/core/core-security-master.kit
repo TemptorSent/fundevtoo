@@ -1,6 +1,8 @@
-# Core security packages:
+#REPOREFS=gentoo@master kit-fixups/core-kit/global@master kit-fixups/core-kit/curated@master kit-fixups/core-kit/1.2-prime@master
+# -- Core security packages:
 
 # PaX Utilities
+sys-apps/paxctl
 app-misc/pax-utils
 
 # ACL libs
@@ -17,3 +19,29 @@ sys-auth/pambase
 sys-auth/pam_*
 sys-auth/skey
 sys-apps/pcsc-lite
+
+# Crypto libs
+app-crypt/argon2
+dev-libs/libksba
+
+# SKEY authenticaton
+sys-auth/skey
+
+# OpenSSL packages
+dev-libs/openssl
+app-misc/c_rehash
+
+# GNU TLS-1.2 and SSL-3.0 libs, and certificate utils:
+net-libs/gnutls
+
+# GPG
+dev-libs/npth
+dev-libs/libgcrypt
+dev-libs/libgpg-error
+dev-libs/libassuan
+app-crypt/gnupg
+
+# Pin entry
+app-eselect/eselect-pinentry
+app-crypt/pinentry
+

@@ -1,14 +1,19 @@
+#REPOREFS=gentoo@master kit-fixups/core-kit/global@master kit-fixups/core-kit/curated@master kit-fixups/core-kit/1.2-prime@master
 # -- Core gentoo packages
 
 # Common gentoo functions used by many scripts
 sys-apps/gentoo-functions
 
 # Portage
+virtual/package-manager
 sys-apps/portage
 
+# Sandbox for ebuild
+sys-apps/sandbox
+
 # Portage utilities
-app-admin/portage-utils
-app-admin/gentoolkit
+app-portage/portage-utils
+app-portage/gentoolkit
 
 # eselect utility
 app-admin/eselect

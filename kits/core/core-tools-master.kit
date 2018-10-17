@@ -1,6 +1,9 @@
 #REPOREFS=gentoo@master kit-fixups/core-kit/global@master kit-fixups/core-kit/curated@master kit-fixups/core-kit/1.2-prime@master
 # -- Core tools
 
+# POSIX shell (/bin/sh) symlink manager
+app-eselect/eselect-sh
+
 # Busybox
 sys-apps/busybox
 
@@ -23,6 +26,9 @@ app-arch/xz-utils
 app-arch/unzip
 app-arch/zip
 
+# Mime Types
+app-misc/mime-types
+
 # File utils
 sys-apps/file
 sys-apps/findutils
@@ -40,11 +46,27 @@ net-misc/rsync
 sys-apps/grep
 sys-apps/ed
 sys-apps/sed
+
+# Awk
 virtual/awk
 sys-apps/gawk
+app-eselect/eselect-awk
 
 # Pagers
 virtual/pager
+sys-apps/more
 sys-apps/less
 
+# Terminal Multiplexers
+app-misc/screen
+app-misc/tmux
 
+# Editors
+app-misc/editor-wrapper
+app-editors/nano
+
+# vim
+app-eselect/eselect-vi
+app-editors/vim-core
+app-editors/vim
+app-vim/gentoo-syntax

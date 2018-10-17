@@ -20,12 +20,20 @@ sys-auth/pam_*
 sys-auth/skey
 sys-apps/pcsc-lite
 
+# YP/NIS+ Directory Services libs
+net-libs/libnsl
+
 # Crypto libs
 app-crypt/argon2
 dev-libs/libksba
 
 # SKEY authenticaton
 sys-auth/skey
+
+# CA Certificates (needs debianutils)
+app-misc/ca-certificates
+sys-apps/debianutils
+
 
 # OpenSSL packages
 dev-libs/openssl
@@ -45,3 +53,5 @@ app-crypt/gnupg
 app-eselect/eselect-pinentry
 app-crypt/pinentry
 
+# Entropy source
+sys-apps/haveged

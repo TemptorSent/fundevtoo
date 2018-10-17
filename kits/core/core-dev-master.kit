@@ -5,6 +5,9 @@
 sys-apps/diffutils
 sys-devel/patch
 
+# Git SCM
+dev-vcs/git
+
 # Package config tool:
 virtual/pkgconfig
 dev-util/pkgconf
@@ -43,22 +46,35 @@ dev-util/cmake
 dev-util/meson
 dev-util/ninja
 
-# libtool and Gentoo libtool patches
+# libtool and libs with Gentoo libtool patches
 sys-devel/libtool
 app-portage/elt-patches
+dev-libs/libltdl
 
 # L10n/I18n
 sys-devel/gettext
 virtual/libiconv
+dev-util/itstool
 
 # ELF utils
 virtual/libelf
 virtual/libelf-1
 dev-libs/elfutils
 
+# Ctags source code parser
+app-eselect/eselect-ctags
+dev-util/ctags
+
+# Perfect hash function generator
+dev-util/gperf
+
+# Option parsing lib
+dev-libs/popt
+
 # db libs
 sys-libs/db
 sys-libs/gdbm
+dev-db/sqlite
 
 # Core math libs:
 dev-libs/gmp
@@ -69,6 +85,43 @@ dev-libs/isl
 # Foreign Funtion Interface library:
 dev-libs/libffi
 virtual/libffi
+
+# Regex libs
+dev-util/re2c
+dev-libs/libpcre
+dev-libs/libpcre2
+
+# XML and other markup language libraries:
+dev-libs/expat
+dev-libs/iniparser
+dev-libs/jansson
+dev-libs/jsoncpp
+dev-libs/libxml2
+dev-libs/libxslt
+dev-libs/libyaml
+
+# Unicode libs
+dev-libs/icu
+
+# IO Libs
+dev-libs/libaio
+dev-libs/libuv
+
+# File decriptor event triggered function support
+dev-libs/libevent
+
+# Testing libs
+dev-libs/check
+
+# Boost libs
+dev-util/boost-build
+dev-libs/boost
+
+# BSD API support lib
+dev-libs/libbsd
+
+# Pipeline manipulation lib
+dev-libs/libpipeline
 
 # Libc virtual (actual libc found in toolchain kit)
 virtual/libc

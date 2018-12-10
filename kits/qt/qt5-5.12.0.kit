@@ -1,0 +1,19 @@
+#REPOREFS=gentoo-qt@master
+
+# Eclasses
+eclass/qt5*
+
+# Ebuilds not following release (may be common with other branches)
+dev-qt/qtchooser/qtchooser-0_p20170803.ebuild
+dev-qt/qtlockedfile/qtlockedfile-2.4.1_p20171024.ebuild
+dev-qt/qtlockedfile/files/qtlockedfile.prf
+dev-qt/qtsingleapplication/qtsingleapplication-2.6.1_p20171024.ebuild
+dev-qt/qtsingleapplication/files/*
+
+# Ebuild on (or nearest) branch, but not exact release triple
+dev-qt/qtwebkit/*-5.212*
+dev-qt/qtwebkit/files/qtwebkit-5.212*.patch
+
+# Qt5 5.12 LTS branch, release 5.11.0
+dev-qt/*/*-5.12.0*
+dev-qt/*/files/*-5.12.0*

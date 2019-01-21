@@ -1,0 +1,17 @@
+A tool to extract list of files in $FILESDIR needed by each ebuild.
+
+
+Install:
+
+mkdir -p /etc/portage/bashrc.d
+[ -f /etc/portage/bashrc ] && mv /etc/portage/bashrc /etc/portage/bashrc.d/portage.bashrc
+echo "source /etc/portage/bashrc.d/*" > /etc/portage/bashrc
+cp ebuild_files_depends.bashrc /etc/portage/bashrc.d
+mkdir -p ~portage/.ebuild_hooks
+cp ebuld_files_depends.pl ~portage/.ebuild_hooks
+
+Usage:
+_EMERGE_HOOK_FILES_DEPENDS=1 <emerge/ebuild cmdline>
+
+Output:
+List of files needed by the ebuild, relative to the repo root.

@@ -70,7 +70,7 @@ sub get_patch_files {
     foreach my $filename ( @{$file_list_ref} ) {
         chomp $filename;
 
-        if ( index $ebuild, $filename ) {
+        if ( index($ebuild, $filename) != -1 ) {
             my $path_end = substr $filename, length($build_dir) + 1;
             $filename = "$ENV{CATEGORY}/$ENV{PN}/$path_end";
             push @found_files, "$filename\n";

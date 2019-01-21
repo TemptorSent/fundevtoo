@@ -12,7 +12,7 @@ use File::Find;
 
 our $VERSION = 0.0.1;
 
-my $modified_ebuild = replace_ebuild_vars( get_ebuild() );
+my $modified_ebuild = strip_all_quotes( replace_ebuild_vars( get_ebuild() ) );
 my $build_dir       = $ENV{'PORTAGE_BUILDDIR'};
 my @file_list;
 find(
@@ -34,6 +34,7 @@ if ( !scalar @file_list ) {
 
 print @{ get_patch_files( $modified_ebuild, \@file_list ) };
 
+
 ## get_ebuild function accepts a path to an ebuild file and
 ## returns it's contents as a string
 sub get_ebuild {
@@ -44,20 +45,32 @@ sub get_ebuild {
     return join q(), @ebuild_lines;
 }
 
+
 ## replace_ebuild_vars function accepts a string that is the contents
 ## of an ebuild and returns a string that has all the associated
 ## keys from the env replaced with their values in the same string
 sub replace_ebuild_vars {
     my $string = shift;
 
+    # Substitute variable references for their values
     foreach my $key ( keys %ENV ) {
-
-        $string =~ s/\$[{] \Q$key\E [}]/$ENV{$key}/xms;
-        $string =~ s/[\"\']//xms;
+        $string =~ s/\$[{] \Q$key\E [}]/$ENV{$key}/xmsg;
     }
 
     return $string;
 }
+
+
+## strip_all_quotes function accepts a string and returns
+## a string with all quote characters ["'] stripped.
+sub strip_all_quotes {
+    my $string = shift;
+
+    $string =~ s/[\"\']//xmsg;
+
+    return $string;
+}
+
 
 ## This function accepts a string that is a modified ebuild
 ## and a reference to an array of files

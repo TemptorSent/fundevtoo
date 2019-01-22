@@ -17,10 +17,7 @@ my $build_dir       = $ENV{'PORTAGE_BUILDDIR'};
 my @file_list;
 find(
     sub {
-        if ( !-f ) {
-            return;
-        }
-        else {
+        if (-f) {
             push @file_list, $File::Find::name;
         }
     },
@@ -34,7 +31,6 @@ if ( !scalar @file_list ) {
 
 print @{ get_patch_files( $modified_ebuild, \@file_list ) };
 
-
 ## get_ebuild function accepts a path to an ebuild file and
 ## returns it's contents as a string
 sub get_ebuild {
@@ -44,7 +40,6 @@ sub get_ebuild {
     close $fh or die "Unable to close filehandle: $ERRNO\n";
     return join q(), @ebuild_lines;
 }
-
 
 ## replace_ebuild_vars function accepts a string that is the contents
 ## of an ebuild and returns a string that has all the associated
@@ -60,7 +55,6 @@ sub replace_ebuild_vars {
     return $string;
 }
 
-
 ## strip_all_quotes function accepts a string and returns
 ## a string with all quote characters ["'] stripped.
 sub strip_all_quotes {
@@ -70,7 +64,6 @@ sub strip_all_quotes {
 
     return $string;
 }
-
 
 ## This function accepts a string that is a modified ebuild
 ## and a reference to an array of files
@@ -83,7 +76,7 @@ sub get_patch_files {
     foreach my $filename ( @{$file_list_ref} ) {
         chomp $filename;
 
-        if ( index($ebuild, $filename) != -1 ) {
+        if ( index( $ebuild, $filename ) != -1 ) {
             my $path_end = substr $filename, length($build_dir) + 1;
             $filename = "$ENV{CATEGORY}/$ENV{PN}/$path_end";
             push @found_files, "$filename\n";

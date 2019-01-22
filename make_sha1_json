@@ -1,0 +1,57 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use JSON;
+
+my %repos_sha1;
+my $kit_list_file  = 'kit.list';
+my $dest_repo_root = '/home/haxmeister/temptorsent-dest-trees/';
+my $kit_list       = get_kit_list_from($kit_list_file);
+
+foreach my $item (@$kit_list){
+	my $path_to_kit = "$dest_repo_root"."$item";
+	my $sha1 = get_sha1_from($path_to_kit);
+	my ($key, $value) = split ('/', $item);
+	$repos_sha1{$key}{$value} = $sha1;
+}
+
+my $json = JSON->new->allow_nonref;
+print $json->pretty->encode(\%repos_sha1);
+
+sub get_sha1_from{
+	my $path = shift;
+
+	chdir $path;
+	my $git_results = `git log merged | head | grep commit`;
+	my ($key, $value) = split (/\s+/,$git_results);
+
+	# make sure we catch something 
+	if ($value){
+		return $value;
+	}
+	else{
+		die "Recieved no data from the system command:\n 
+		\"git log merged | head | grep commit \"\n
+		in the directory $path";
+	}
+	
+}
+
+sub get_kit_list_from{
+	my $file = shift;
+	
+	open (my $fh, '<', $file) or die "Cannot open $file ";
+	my @lines = <$fh>;
+	close $fh;
+
+	foreach my $line (@lines){
+		chomp $line;
+			
+		next if $line =~ /^#/;    # skip lines starting with comments
+		next unless $line =~ /\S/;# skip lines that are only whitespace
+		$line =~ s/\s//msxg;      # remove white space				
+		
+	}
+	return \@lines;
+}

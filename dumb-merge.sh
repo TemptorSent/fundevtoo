@@ -220,7 +220,7 @@ for mykit in ${KITLIST} ; do
 				# Found comment, do nothing using ':' command
 				:
 			;;
-			[a-z]*)
+			[_.[:alnum:]]*)
 				# Add this glob to the list of all globs to extract
 				allglobs="${allglobs} ${myglob}"
 			;;

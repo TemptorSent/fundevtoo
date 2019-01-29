@@ -3,4 +3,6 @@ gentoo	gentoo	https://anongit.gentoo.org/git/repo/gentoo.git
 gentoo-qt	gentoo-qt	https://anongit.gentoo.org/git/proj/qt.git
 gentoo-musl	gentoo-musl	https://anongit.gentoo.org/git/proj/musl.git
 kit-fixups	kit-fixups	https://github.com/TemptorSent/kit-fixups.git
+temptorsent-dev-qt	temptorsent-dev-qt	https://github.com/TemptorSent/overlay-dev-qt-kit.git
+
 

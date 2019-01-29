@@ -14,6 +14,55 @@ dev-qt/qtsingleapplication/files/*
 dev-qt/qtwebkit/*-5.212*
 dev-qt/qtwebkit/files/qtwebkit-5.212*.patch
 
-# Qt5 5.12 LTS branch, release 5.11.0
+# Qt5 5.12 LTS branch, release 5.12.0
 dev-qt/*/*-5.12.0*
 dev-qt/*/files/*-5.12.0*
+
+# Patches required
+dev-qt/qtdeclarative/files/qtdeclartative-5.4.2-disable-jit.patch
+dev-qt/qtspeech/files/qtspeech-5.9.4-nogui.patch
+dev-qt/qtwebengine/files/qtwebengine-5.11.2-paxmark-mksnapshot.patch
+dev-qt/qtwebengine/files/qtwebengine-5.11.1-nouveau-disable-gpu.patch
+dev-qt/qtwebengine/files/qtwebengine-5.9.6-gcc8.patch
+
+# Remainder of repo from TemptorSent dev-qt overlay
+#REPOREFS=temptorsent-dev-qt@master
+
+# dev-qt-kit profiles, metadata, text, etc.
+profiles/*
+metadata/*
+./README*
+./LICENSE*
+./COPY*
+./*.md
+./*.rst
+./*.txt
+
+# Tool for managing the repo
+tools/*
+
+# Qt for Python (pyside2)
+dev-python/shiboken2/*-5.12.0.*
+dev-python/pyside2/*-5.12.0.*
+dev-python/pyside2-tools/*-5.12.0.*
+
+
+## riverbankcomputing.com sw (see tools/riverbankcomputing.com/updater.sh)
+# sip
+dev-python/sip/*-4.19.14*
+dev-python/sip/*-4.9999.*
+dev-python/sip/files/sip-4.18-darwin.patch
+
+# QScintilla
+x11-libs/qscintilla
+dev-python/qscintilla-python
+
+# PyQt5 (with private sip module) & suite
+dev-python/PyQt5_sip/*-4.19.14*
+dev-python/PyQt5_sip/files/sip-4.18-darwin.patch
+dev-python/PyQt5/*-5.12*
+dev-python/PyQt3D/*-5.12*
+dev-python/PyQtChart/*-5.12*
+dev-python/PyQtDataVisualization/*-5.12*
+dev-python/PyQtWebEngine/*.ebuild
+
